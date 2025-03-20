@@ -1,8 +1,20 @@
 import pytest
 import allure
-from fastapi.testclient import TestClient
-from apiserver import app
-from config import Config
+import os
+import sys
+
+# Add the current directory to Python path
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+try:
+    from fastapi.testclient import TestClient
+    from apiserver import app
+    from config import Config
+except ImportError as e:
+    print(f"Error importing modules: {e}")
+    print("Current directory:", os.getcwd())
+    print("Python path:", sys.path)
+    raise
 
 # Create a test client
 client = TestClient(app)

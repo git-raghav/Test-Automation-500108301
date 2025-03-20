@@ -9,3 +9,5 @@ allure-pytest==2.13.2
 python-dotenv==1.0.0
 responses==0.24.1
 pytest-mock==3.12.0
+httpx==0.25.1
+starlette==0.27.0

@@ -111,7 +111,7 @@ _Note: The screenshot shows the test execution results including passed tests, c
 -   pip (Python package manager)
 -   Git
 
-### Installation
+### Installation Steps:
 
 1. Clone the repository:
 

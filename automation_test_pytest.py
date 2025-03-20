@@ -1,33 +1,32 @@
 import pytest
-import requests
 import allure
 from fastapi.testclient import TestClient
 from apiserver import app
 from config import Config
-from responses import RequestsMock
 
 # Create a test client
 client = TestClient(app)
 
 # Define test cases as a list of tuples for parameterized testing
 testcases = [
-    ("http://localhost:8000/add/2/2", 4, "Test addition of 2 and 2"),
-    ("http://localhost:8000/subtract/2/2", 0, "Test subtraction of 2 from 2"),
-    ("http://localhost:8000/multiply/2/2", 4, "Test multiplication of 2 and 2"),
-    ("http://localhost:8000/add/-1/1", 0, "Test addition of -1 and 1"),
-    ("http://localhost:8000/multiply/0/5", 0, "Test multiplication by zero"),
-    ("http://localhost:8000/add/999999999/1", 1000000000, "Test addition of large numbers"),
-    ("http://localhost:8000/subtract/-5/-3", -2, "Test subtraction of negative numbers"),
+    ("/add/2/2", 4, "Test addition of 2 and 2"),
+    ("/subtract/2/2", 0, "Test subtraction of 2 from 2"),
+    ("/multiply/2/2", 4, "Test multiplication of 2 and 2"),
+    ("/add/-1/1", 0, "Test addition of -1 and 1"),
+    ("/multiply/0/5", 0, "Test multiplication by zero"),
+    ("/add/999999999/1", 1000000000, "Test addition of large numbers"),
+    ("/subtract/-5/-3", -2, "Test subtraction of negative numbers"),
 ]
 
-@pytest.mark.parametrize("url, expected, description", testcases)
+@pytest.mark.parametrize("endpoint, expected, description", testcases)
 @allure.step("Testing API endpoint")
-def test_api(url, expected, description):
+def test_api(endpoint, expected, description):
     """
     Parameterized test for API endpoints.
     """
-    with allure.step(f"Making request to {url}"):
-        response = requests.get(url)
+    with allure.step(f"Making request to {endpoint}"):
+        response = client.get(endpoint)
+        assert response.status_code == 200, f"Expected status code 200, got {response.status_code}"
         result = response.json()["result"]
         assert result == expected, f"{description}. Expected {expected}, got {result}"
 
@@ -107,20 +106,6 @@ def test_response_time():
     end_time = time.time()
     assert response.status_code == 200
     assert end_time - start_time < Config.TEST_TIMEOUT
-
-@allure.feature("Mocking")
-@allure.story("External Dependencies")
-def test_with_mock(mocker):
-    """
-    Test with mocked external dependencies.
-    """
-    # Mock the requests.get method
-    mock_response = mocker.patch('requests.get')
-    mock_response.return_value.json.return_value = {"result": 5}
-
-    response = requests.get("http://localhost:8000/add/2/3")
-    assert response.json()["result"] == 5
-    mock_response.assert_called_once()
 
 if __name__ == "__main__":
     pytest.main([

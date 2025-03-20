@@ -37,9 +37,18 @@ jobs:
                     --cov=apiserver \
                     --html=report.html \
                     --self-contained-html \
-                    --alluredir=./allure-results
+                    --alluredir=./allure-results \
+                    --tb=short \
+                    --capture=no
+
+            - name: Check if tests passed
+              if: failure()
+              run: |
+                  echo "Tests failed. Check the test report for details."
+                  cat report.html
 
             - name: Run performance tests
+              if: success() || failure()
               run: |
                   locust -f performance_test.py \
                     --host=http://localhost:8000 \
@@ -49,6 +58,7 @@ jobs:
                     --headless
 
             - name: Upload test report
+              if: always()
               uses: actions/upload-artifact@v4
               with:
                   name: test-report
@@ -56,6 +66,7 @@ jobs:
                   retention-days: 7
 
             - name: Upload allure results
+              if: always()
               uses: actions/upload-artifact@v4
               with:
                   name: allure-results

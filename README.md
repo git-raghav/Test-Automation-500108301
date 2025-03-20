@@ -50,7 +50,7 @@ These issues were resolved by:
 -   Parameterized test cases
 -   Error handling and validation
 
-## Project Structure(also contains original files like api.py, test.py etc. just for reference)
+## Project Structure (also contains original files like api.py, test.py etc. just for reference)
 
 ```
 .
@@ -94,6 +94,14 @@ These issues were resolved by:
 -   Test configuration parameters
 -   Base URL management
 -   Timeout settings
+
+## Test Report Screenshot
+
+Here's a screenshot of the generated test report:
+
+![Test Report](docs/test-report.png)
+
+_Note: The screenshot shows the test execution results including passed tests, coverage information, and performance metrics._
 
 ## Getting Started
 

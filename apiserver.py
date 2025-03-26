@@ -44,8 +44,14 @@ class OperationResult(BaseModel):
 # Startup event
 @app.on_event("startup")
 async def startup_event():
-    await init_db()
-    logger.info("Application startup")
+    """Initialize database and create tables"""
+    try:
+        # Initialize database
+        await init_db()
+        logger.info("Application startup")
+    except Exception as e:
+        logger.error(f"Error during startup: {str(e)}")
+        raise
 
 # User registration
 @app.post("/register", response_model=Token)

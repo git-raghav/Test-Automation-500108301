@@ -7,9 +7,10 @@ from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
+from sqlalchemy import select
 from apiserver import app
 from models import Base, User, OperationHistory
-from database import get_db
+from database import get_db, init_db
 from auth import get_password_hash
 import json
 
@@ -58,20 +59,27 @@ test_user = {
 
 @pytest.fixture(autouse=True)
 async def setup_database():
-    # Create all tables
+    """Setup test database and create tables"""
+    # Initialize database and create tables
+    await init_db()
+
+    # Create tables in test database
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
+
     yield
+
     # Clean up after tests
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
 
 @pytest.fixture
 async def test_user_token():
+    """Register test user and return token"""
     # Register test user
     response = client.post("/register", json=test_user)
-    assert response.status_code == 200
+    assert response.status_code == 200, f"Registration failed: {response.text}"
     return response.json()["access_token"]
 
 @pytest.mark.asyncio
@@ -113,8 +121,9 @@ async def test_unauthorized_access():
 @allure.story("Operation History")
 async def test_operation_history(test_user_token):
     """Test operation history endpoint"""
-    # Perform some operations
     headers = {"Authorization": f"Bearer {test_user_token}"}
+
+    # Perform some operations
     client.get("/add/2/3", headers=headers)
     client.get("/subtract/5/3", headers=headers)
 

@@ -1,44 +1,42 @@
-from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy.pool import StaticPool
 import os
-from config import Config
+from models import Base
 
-# Database URL - using SQLite for testing, PostgreSQL for production
-SQLALCHEMY_DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "sqlite+aiosqlite:///./test.db" if Config.ENV == "test" else "postgresql://postgres:postgres@localhost:5432/arithmetic_db"
-)
+# Get database URL from environment variable or use default
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./arithmetic.db")
 
-# Create async engine
+# Create engine
 engine = create_async_engine(
-    SQLALCHEMY_DATABASE_URL,
-    echo=True,
-    future=True
+    DATABASE_URL,
+    connect_args={"check_same_thread": False},
+    poolclass=StaticPool,
 )
 
-# Create async session
-AsyncSessionLocal = sessionmaker(
+# Create session factory
+SessionLocal = sessionmaker(
     engine,
     class_=AsyncSession,
     expire_on_commit=False
 )
 
-# Create base class for models
-class Base(DeclarativeBase):
-    pass
-
-# Dependency to get DB session
 async def get_db():
-    async with AsyncSessionLocal() as session:
+    """Get database session"""
+    async with SessionLocal() as session:
         try:
             yield session
         finally:
             await session.close()
 
-# Create tables
 async def init_db():
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    """Initialize database and create tables"""
+    try:
+        async with engine.begin() as conn:
+            # Drop all tables first
+            await conn.run_sync(Base.metadata.drop_all)
+            # Create all tables
+            await conn.run_sync(Base.metadata.create_all)
+    except Exception as e:
+        print(f"Error initializing database: {str(e)}")
+        raise

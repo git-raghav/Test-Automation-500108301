@@ -50,7 +50,16 @@ jobs:
 
             - name: Start FastAPI server
               run: |
+                  # Create necessary directories
+                  mkdir -p logs allure-results
+
+                  # Start server with proper environment variables
+                  DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/arithmetic_db \
+                  ENV=test \
+                  SECRET_KEY=test-secret-key \
                   nohup python apiserver.py > server.log 2>&1 &
+
+                  # Save server PID
                   echo $! > server.pid
 
                   # Wait for server to be ready
@@ -78,6 +87,12 @@ jobs:
 
             - name: Run unit tests with coverage
               run: |
+                  # Ensure server is running before tests
+                  if ! curl -s http://localhost:8000/ > /dev/null; then
+                    echo "Server is not running before tests"
+                    exit 1
+                  fi
+
                   pytest automation_test_pytest.py -v \
                     --cov=apiserver \
                     --html=report.html \

@@ -46,20 +46,27 @@ jobs:
 
             - name: Set environment variables
               run: |
-                  echo "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/arithmetic_db" >> $GITHUB_ENV
+                  echo "DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/arithmetic_db" >> $GITHUB_ENV
                   echo "ENV=test" >> $GITHUB_ENV
                   echo "SECRET_KEY=test-secret-key" >> $GITHUB_ENV
 
             - name: Start FastAPI server
-              run: python apiserver.py &
+              run: |
+                  python apiserver.py &
+                  # Wait for server to be ready
+                  for i in {1..30}; do
+                    if curl -s http://localhost:8000/ > /dev/null; then
+                      echo "Server is up!"
+                      break
+                    fi
+                    echo "Waiting for server to start..."
+                    sleep 1
+                  done
               env:
                   PYTHONUNBUFFERED: 1
-                  DATABASE_URL: postgresql://postgres:postgres@localhost:5432/arithmetic_db
+                  DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/arithmetic_db
                   ENV: test
                   SECRET_KEY: test-secret-key
-
-            - name: Wait for server to be ready
-              run: sleep 5 # Wait to ensure the server is up
 
             - name: Run unit tests with coverage
               run: |
@@ -80,6 +87,12 @@ jobs:
             - name: Run performance tests
               if: success() || failure()
               run: |
+                  # Register a test user first
+                  curl -X POST http://localhost:8000/register \
+                    -H "Content-Type: application/json" \
+                    -d '{"username":"testuser","email":"test@example.com","password":"testpassword"}'
+
+                  # Run performance tests
                   locust -f performance_test.py \
                     --host=http://localhost:8000 \
                     --users 10 \

@@ -5,6 +5,9 @@ from datetime import datetime
 from typing import Any, Dict
 import os
 
+# Create logs directory if it doesn't exist
+os.makedirs("logs", exist_ok=True)
+
 # Configure structlog
 structlog.configure(
     processors=[
@@ -43,10 +46,6 @@ class CustomJsonFormatter(logging.Formatter):
         return json.dumps(log_data)
 
 def setup_logging():
-    # Create logs directory if it doesn't exist
-    if not os.path.exists("logs"):
-        os.makedirs("logs")
-
     # Configure file handler
     file_handler = logging.FileHandler("logs/app.log")
     file_handler.setFormatter(CustomJsonFormatter())
@@ -65,3 +64,6 @@ def setup_logging():
 
 # Initialize logging
 setup_logging()
+
+# Write initial log entry to ensure file is created
+logger.info("Logging system initialized", event="startup")

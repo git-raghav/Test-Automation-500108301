@@ -37,8 +37,8 @@ class Token(BaseModel):
     token_type: str
 
 class OperationResult(BaseModel):
-    result: float
-    operation: str
+    result: float | None = None
+    operation: str | None = None
     num1: float
     num2: float
 

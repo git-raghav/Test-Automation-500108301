@@ -141,8 +141,8 @@ async def test_operation_history(test_user_token):
     headers = {"Authorization": f"Bearer {test_user_token}"}
 
     # Perform some operations
-    client.post("/add", json={"num1": 2, "num2": 3}, headers=headers)
-    client.post("/subtract", json={"num1": 5, "num2": 3}, headers=headers)
+    client.post("/add", json={"operation": "add", "num1": 2, "num2": 3}, headers=headers)
+    client.post("/subtract", json={"operation": "subtract", "num1": 5, "num2": 3}, headers=headers)
 
     # Get history
     response = client.get("/history", headers=headers)
@@ -158,7 +158,7 @@ async def test_operation_history(test_user_token):
 async def test_operation_logging(test_user_token):
     """Test that operations are logged to database"""
     headers = {"Authorization": f"Bearer {test_user_token}"}
-    response = client.post("/add", json={"num1": 2, "num2": 3}, headers=headers)
+    response = client.post("/add", json={"operation": "add", "num1": 2, "num2": 3}, headers=headers)
     assert response.status_code == 200
 
     # Verify operation was logged
@@ -196,7 +196,7 @@ async def test_response_time(test_user_token):
     headers = {"Authorization": f"Bearer {test_user_token}"}
 
     start_time = time.time()
-    response = client.post("/add", json={"num1": 2, "num2": 3}, headers=headers)
+    response = client.post("/add", json={"operation": "add", "num1": 2, "num2": 3}, headers=headers)
     end_time = time.time()
 
     assert response.status_code == 200
@@ -208,7 +208,7 @@ async def test_response_time(test_user_token):
 async def test_operation_logs(test_user_token):
     """Test that operations are properly logged"""
     headers = {"Authorization": f"Bearer {test_user_token}"}
-    response = client.post("/add", json={"num1": 2, "num2": 3}, headers=headers)
+    response = client.post("/add", json={"operation": "add", "num1": 2, "num2": 3}, headers=headers)
     assert response.status_code == 200
 
     # Check log file

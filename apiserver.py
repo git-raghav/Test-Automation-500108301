@@ -17,6 +17,7 @@ from auth import (
 from logger import logger
 import uvicorn
 from fastapi.responses import JSONResponse
+import math
 
 # Initialize the FastAPI app
 app = FastAPI(
@@ -40,6 +41,9 @@ class OperationResult(BaseModel):
     operation: str
     num1: float
     num2: float
+
+class RootOperation(BaseModel):
+    number: float
 
 # Startup event
 @app.on_event("startup")
@@ -114,34 +118,33 @@ async def read_root(current_user: User = Depends(get_current_user)):
     return {"Hello": "World"}
 
 # Addition endpoint
-@app.get("/add/{num1}/{num2}", tags=["arithmetic"], response_model=OperationResult)
+@app.post("/add", tags=["arithmetic"], response_model=OperationResult)
 async def add(
-    num1: float,
-    num2: float,
+    operation: OperationResult,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     try:
-        result = num1 + num2
+        result = operation.num1 + operation.num2
         # Log operation to database
-        operation = OperationHistory(
+        db_operation = OperationHistory(
             operation="add",
-            num1=num1,
-            num2=num2,
+            num1=operation.num1,
+            num2=operation.num2,
             result=result,
             user_id=current_user.id
         )
-        db.add(operation)
+        db.add(db_operation)
         await db.commit()
 
         logger.info(
             "Addition operation performed",
             username=current_user.username,
-            num1=num1,
-            num2=num2,
+            num1=operation.num1,
+            num2=operation.num2,
             result=result
         )
-        return {"result": result, "operation": "add", "num1": num1, "num2": num2}
+        return {"result": result, "operation": "add", "num1": operation.num1, "num2": operation.num2}
     except Exception as e:
         logger.error(
             "Error in addition operation",
@@ -151,34 +154,33 @@ async def add(
         raise HTTPException(status_code=500, detail=str(e))
 
 # Subtraction endpoint
-@app.get("/subtract/{num1}/{num2}", tags=["arithmetic"], response_model=OperationResult)
+@app.post("/subtract", tags=["arithmetic"], response_model=OperationResult)
 async def subtract(
-    num1: float,
-    num2: float,
+    operation: OperationResult,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     try:
-        result = num1 - num2
+        result = operation.num1 - operation.num2
         # Log operation to database
-        operation = OperationHistory(
+        db_operation = OperationHistory(
             operation="subtract",
-            num1=num1,
-            num2=num2,
+            num1=operation.num1,
+            num2=operation.num2,
             result=result,
             user_id=current_user.id
         )
-        db.add(operation)
+        db.add(db_operation)
         await db.commit()
 
         logger.info(
             "Subtraction operation performed",
             username=current_user.username,
-            num1=num1,
-            num2=num2,
+            num1=operation.num1,
+            num2=operation.num2,
             result=result
         )
-        return {"result": result, "operation": "subtract", "num1": num1, "num2": num2}
+        return {"result": result, "operation": "subtract", "num1": operation.num1, "num2": operation.num2}
     except Exception as e:
         logger.error(
             "Error in subtraction operation",
@@ -188,37 +190,74 @@ async def subtract(
         raise HTTPException(status_code=500, detail=str(e))
 
 # Multiplication endpoint
-@app.get("/multiply/{num1}/{num2}", tags=["arithmetic"], response_model=OperationResult)
+@app.post("/multiply", tags=["arithmetic"], response_model=OperationResult)
 async def multiply(
-    num1: float,
-    num2: float,
+    operation: OperationResult,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     try:
-        result = num1 * num2
+        result = operation.num1 * operation.num2
         # Log operation to database
-        operation = OperationHistory(
+        db_operation = OperationHistory(
             operation="multiply",
-            num1=num1,
-            num2=num2,
+            num1=operation.num1,
+            num2=operation.num2,
             result=result,
             user_id=current_user.id
         )
-        db.add(operation)
+        db.add(db_operation)
         await db.commit()
 
         logger.info(
             "Multiplication operation performed",
             username=current_user.username,
-            num1=num1,
-            num2=num2,
+            num1=operation.num1,
+            num2=operation.num2,
             result=result
         )
-        return {"result": result, "operation": "multiply", "num1": num1, "num2": num2}
+        return {"result": result, "operation": "multiply", "num1": operation.num1, "num2": operation.num2}
     except Exception as e:
         logger.error(
             "Error in multiplication operation",
+            username=current_user.username,
+            error=str(e)
+        )
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Square root endpoint
+@app.post("/root", tags=["arithmetic"], response_model=OperationResult)
+async def root(
+    operation: RootOperation,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    try:
+        if operation.number < 0:
+            raise HTTPException(status_code=400, detail="Cannot calculate square root of negative number")
+
+        result = math.sqrt(operation.number)
+        # Log operation to database
+        db_operation = OperationHistory(
+            operation="root",
+            num1=operation.number,
+            num2=0,  # Not used for root operation
+            result=result,
+            user_id=current_user.id
+        )
+        db.add(db_operation)
+        await db.commit()
+
+        logger.info(
+            "Square root operation performed",
+            username=current_user.username,
+            number=operation.number,
+            result=result
+        )
+        return {"result": result, "operation": "root", "num1": operation.number, "num2": 0}
+    except Exception as e:
+        logger.error(
+            "Error in square root operation",
             username=current_user.username,
             error=str(e)
         )

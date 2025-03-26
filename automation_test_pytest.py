@@ -68,11 +68,9 @@ test_user = {
 async def setup_database():
     """Setup test database and create tables"""
     try:
-        # Drop existing tables
-        await drop_db()
-
         # Create tables in test database
         async with test_engine.begin() as conn:
+            await conn.run_sync(Base.metadata.drop_all)
             await conn.run_sync(Base.metadata.create_all)
 
         logger.info("Test database initialized")
@@ -80,7 +78,8 @@ async def setup_database():
         yield
 
         # Clean up after tests
-        await drop_db()
+        async with test_engine.begin() as conn:
+            await conn.run_sync(Base.metadata.drop_all)
         logger.info("Test database cleaned up")
     except Exception as e:
         logger.error(f"Error in test database setup: {str(e)}")

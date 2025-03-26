@@ -1,6 +1,34 @@
-# Backend API Test Automation
+# FastAPI Test Automation Project
 
-A comprehensive API testing framework demonstrating automated testing of a FastAPI backend using pytest, GitHub Actions, and various testing tools.
+A comprehensive FastAPI backend with automated testing and CI/CD integration using GitHub Actions. This project demonstrates best practices in API development, testing, and continuous integration.
+
+## Features
+
+### API Features
+
+-   Basic arithmetic operations (add, subtract, multiply, square root)
+-   User authentication with JWT tokens
+-   Operation history tracking
+-   Input validation
+-   Error handling
+-   Logging system
+
+### Testing Features
+
+-   Unit tests with pytest
+-   Integration tests
+-   Performance testing with Locust
+-   Test coverage reporting
+-   Allure test reports
+-   HTML test reports
+
+### CI/CD Features
+
+-   Automated testing with GitHub Actions
+-   PostgreSQL service container
+-   Environment configuration
+-   Test report generation
+-   Artifact storage
 
 ## Troubleshooting
 
@@ -39,88 +67,22 @@ These issues were resolved by:
 -   Creating necessary directories
 -   Improving test structure
 
-## Features
+## Prerequisites
 
--   FastAPI server with arithmetic endpoints
--   Automated testing with pytest
--   GitHub Actions CI/CD integration
--   Performance testing with Locust
--   HTML and Allure test reporting
--   Environment configuration management
--   Parameterized test cases
--   Error handling and validation
-
-## Project Structure (also contains original files like api.py, test.py etc. just for reference)
-
-```
-.
-├── apiserver.py              # FastAPI server implementation
-├── automation_test_pytest.py # Main test suite
-├── performance_test.py       # Load testing with Locust
-├── config.py                # Environment configuration
-├── requirements.txt         # Project dependencies
-└── .github/
-    └── workflows/
-        └── TestAutomation.yml  # GitHub Actions workflow
-```
-
-## Implementation Details
-
-### 1. API Server (apiserver.py)
-
--   FastAPI-based REST API
--   Endpoints for arithmetic operations
--   Input validation and error handling
--   Automatic API documentation
-
-### 2. Test Suite (automation_test_pytest.py)
-
--   Parameterized test cases
--   Edge case testing
--   Error handling tests
--   Performance benchmarks
--   Allure reporting integration
-
-### 3. Performance Testing (performance_test.py)
-
--   Load testing with Locust
--   Concurrent user simulation
--   Response time monitoring
--   Performance metrics collection
-
-### 4. Configuration (config.py)
-
--   Environment-specific settings
--   Test configuration parameters
--   Base URL management
--   Timeout settings
-
-## Test Report Screenshot
-
-Here's a screenshot of the generated test report:
-
-![Test Report](docs/test-report.png)
-
-_Note: The screenshot shows the test execution results including passed tests, coverage information, and performance metrics._
-
-## Getting Started
-
-### Prerequisites
-
--   Python 3.10+
--   pip (Python package manager)
+-   Python 3.8+
+-   PostgreSQL (for production)
 -   Git
 
-### Installation Steps:
+## Installation
 
 1. Clone the repository:
 
 ```bash
 git clone <repository-url>
-cd <repository-name>
+cd Test-Automation-500108301
 ```
 
-2. Create and activate virtual environment:
+2. Create and activate a virtual environment:
 
 ```bash
 python -m venv venv
@@ -133,91 +95,164 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### Running the Server
+## Configuration
+
+1. Set up environment variables:
+
+```bash
+# Create a .env file with the following variables
+DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/arithmetic_db
+ENV=development
+SECRET_KEY=your-secret-key
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+```
+
+2. Initialize the database:
+
+```bash
+python -c "from database import init_db; import asyncio; asyncio.run(init_db())"
+```
+
+## Running the Application
+
+1. Start the FastAPI server:
 
 ```bash
 python apiserver.py
 ```
 
-Server starts at `http://localhost:8000`
+The server will be available at `http://localhost:8000`
 
-### Running Tests
+2. Access the API documentation:
 
-1. Unit Tests with Coverage:
+-   Swagger UI: `http://localhost:8000/docs`
+-   ReDoc: `http://localhost:8000/redoc`
+
+## Running Tests
+
+1. Run all tests with coverage:
 
 ```bash
-pytest automation_test_pytest.py -v --cov=apiserver --html=report.html
+pytest automation_test_pytest.py -v \
+  --cov=apiserver \
+  --html=report.html \
+  --self-contained-html \
+  --alluredir=./allure-results
 ```
 
-2. Performance Tests:
+2. Run performance tests:
 
 ```bash
 locust -f performance_test.py --host=http://localhost:8000
 ```
 
-## Test Reports
+## API Endpoints
 
--   HTML Report: `report.html`
--   Allure Report: Run `allure serve ./allure-results`
--   Coverage Report: Generated in terminal
+### Authentication
 
-## CI/CD Pipeline
+-   `POST /register` - Register a new user
+-   `POST /token` - Login and get access token
 
-The project uses GitHub Actions for continuous integration:
+### Arithmetic Operations
 
-1. Runs on push and pull requests
-2. Sets up Python environment
-3. Installs dependencies
-4. Runs unit tests
-5. Performs load testing
-6. Generates and uploads reports
+-   `POST /add` - Add two numbers
+-   `POST /subtract` - Subtract two numbers
+-   `POST /multiply` - Multiply two numbers
+-   `POST /root` - Calculate square root
 
-## Test Cases
+### User Operations
+
+-   `GET /history` - Get user's operation history
+
+## Project Structure
+
+```
+Test-Automation-500108301/
+├── .github/
+│   └── workflows/
+│       └── TestAutomation.yml
+├── apiserver.py
+├── automation_test_pytest.py
+├── performance_test.py
+├── config.py
+├── auth.py
+├── database.py
+├── logger.py
+├── models.py
+├── base.py
+├── requirements.txt
+└── README.md
+```
+
+## Testing Features
 
 ### Unit Tests
 
--   Basic arithmetic operations
--   Edge cases (negative numbers, zero)
--   Error handling
--   Input validation
--   Response time checks
+-   Authentication tests
+-   Arithmetic operation tests
+-   Database operation tests
+-   Error handling tests
+
+### Integration Tests
+
+-   API endpoint integration tests
+-   Database integration tests
+-   Authentication flow tests
 
 ### Performance Tests
 
+-   Response time tests
+-   Load testing with Locust
 -   Concurrent user simulation
--   Response time monitoring
--   Load testing scenarios
--   Resource utilization
 
-## Configuration
+## Test Reports and Artifacts
 
-### Environment Variables
+### Test Report
 
--   `API_BASE_URL`: Base URL for API (default: http://localhost:8000)
--   `ENV`: Environment (development/staging/production)
--   `TEST_TIMEOUT`: Test timeout in seconds
--   `PERFORMANCE_TEST_USERS`: Number of simulated users
+![Test Report 1](docs/test-report1.png)
+![Test Report 2](docs/test-report2.png)
 
-### Test Configuration
 
--   Coverage threshold: 80%
--   Performance test duration: 1 minute
--   Concurrent users: 10
--   Spawn rate: 1 user/second
+### GitHub Actions Artifacts
 
-## API Documentation
+![GitHub Actions Artifacts](docs/artifacts.png)
 
-Access API documentation at:
+The GitHub Actions workflow generates and stores:
 
--   Swagger UI: `http://localhost:8000/docs`
--   ReDoc: `http://localhost:8000/redoc`
+-   Test execution reports
+-   Allure test results
+-   Application logs
+-   Server logs
 
-## Monitoring and Logging
+## CI/CD Pipeline
 
--   Test execution logs
--   Performance metrics
--   Error tracking
--   Coverage reports
+The GitHub Actions workflow includes:
+
+1. Code checkout
+2. Python environment setup
+3. PostgreSQL service container
+4. Dependency installation
+5. Server startup
+6. Test execution
+7. Report generation
+8. Artifact upload
+
+## Logging
+
+The application uses structured logging with:
+
+-   Rotating file handlers
+-   Environment-based log levels
+-   JSON formatting in production
+-   Console output in development
+
+## Security Features
+
+-   JWT token authentication
+-   Password hashing with bcrypt
+-   Input validation with Pydantic
+-   Environment variable configuration
+-   Secure password storage
 
 ## Contributing
 
@@ -230,15 +265,3 @@ Access API documentation at:
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Acknowledgments
-
--   FastAPI for the web framework
--   pytest for testing framework
--   Locust for performance testing
--   GitHub Actions for CI/CD
--   Allure for test reporting
-
-## Author
-
-Raghav Agarwal

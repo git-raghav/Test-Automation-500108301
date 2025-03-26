@@ -10,9 +10,10 @@ from sqlalchemy.pool import StaticPool
 from sqlalchemy import select
 from apiserver import app
 from models import Base, User, OperationHistory
-from database import get_db, init_db
+from database import get_db, init_db, drop_db
 from auth import get_password_hash
 import json
+from logger import logger
 
 # Add the current directory to Python path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -35,7 +36,9 @@ test_engine = create_async_engine(
 TestingSessionLocal = sessionmaker(
     test_engine,
     class_=AsyncSession,
-    expire_on_commit=False
+    expire_on_commit=False,
+    autocommit=False,
+    autoflush=False
 )
 
 # Override the get_db dependency
@@ -43,6 +46,10 @@ async def override_get_db():
     async with TestingSessionLocal() as session:
         try:
             yield session
+        except Exception as e:
+            logger.error(f"Test database session error: {str(e)}")
+            await session.rollback()
+            raise
         finally:
             await session.close()
 
@@ -60,27 +67,38 @@ test_user = {
 @pytest.fixture(autouse=True)
 async def setup_database():
     """Setup test database and create tables"""
-    # Initialize database and create tables
-    await init_db()
+    try:
+        # Drop existing tables
+        await drop_db()
 
-    # Create tables in test database
-    async with test_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
-        await conn.run_sync(Base.metadata.create_all)
+        # Create tables in test database
+        async with test_engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
 
-    yield
+        logger.info("Test database initialized")
 
-    # Clean up after tests
-    async with test_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
+        yield
+
+        # Clean up after tests
+        await drop_db()
+        logger.info("Test database cleaned up")
+    except Exception as e:
+        logger.error(f"Error in test database setup: {str(e)}")
+        raise
 
 @pytest.fixture
 async def test_user_token():
     """Register test user and return token"""
-    # Register test user
-    response = client.post("/register", json=test_user)
-    assert response.status_code == 200, f"Registration failed: {response.text}"
-    return response.json()["access_token"]
+    try:
+        # Register test user
+        response = client.post("/register", json=test_user)
+        assert response.status_code == 200, f"Registration failed: {response.text}"
+        token = response.json()["access_token"]
+        logger.info("Test user registered successfully")
+        return token
+    except Exception as e:
+        logger.error(f"Error creating test user: {str(e)}")
+        raise
 
 @pytest.mark.asyncio
 @allure.feature("Authentication")

@@ -4,6 +4,21 @@ on: [push, pull_request]
 jobs:
     test:
         runs-on: ubuntu-latest
+        services:
+            postgres:
+                image: postgres:13
+                env:
+                    POSTGRES_USER: postgres
+                    POSTGRES_PASSWORD: postgres
+                    POSTGRES_DB: arithmetic_db
+                ports:
+                    - 5432:5432
+                options: >-
+                    --health-cmd pg_isready
+                    --health-interval 10s
+                    --health-timeout 5s
+                    --health-retries 5
+
         steps:
             - name: Checkout code
               uses: actions/checkout@v4
@@ -16,7 +31,7 @@ jobs:
             - name: Install system dependencies
               run: |
                   sudo apt-get update
-                  sudo apt-get install -y python3-pip
+                  sudo apt-get install -y python3-pip postgresql-client
 
             - name: Install Python dependencies
               run: |
@@ -26,10 +41,22 @@ jobs:
             - name: Create allure-results directory
               run: mkdir -p allure-results
 
+            - name: Create logs directory
+              run: mkdir -p logs
+
+            - name: Set environment variables
+              run: |
+                  echo "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/arithmetic_db" >> $GITHUB_ENV
+                  echo "ENV=test" >> $GITHUB_ENV
+                  echo "SECRET_KEY=test-secret-key" >> $GITHUB_ENV
+
             - name: Start FastAPI server
               run: python apiserver.py &
               env:
                   PYTHONUNBUFFERED: 1
+                  DATABASE_URL: postgresql://postgres:postgres@localhost:5432/arithmetic_db
+                  ENV: test
+                  SECRET_KEY: test-secret-key
 
             - name: Wait for server to be ready
               run: sleep 5 # Wait to ensure the server is up
@@ -74,4 +101,12 @@ jobs:
               with:
                   name: allure-results
                   path: ./allure-results
+                  retention-days: 7
+
+            - name: Upload logs
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: app-logs
+                  path: ./logs
                   retention-days: 7

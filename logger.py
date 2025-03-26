@@ -50,7 +50,8 @@ def setup_file_handler() -> RotatingFileHandler:
         "logs/app.log",
         maxBytes=10*1024*1024,  # 10MB
         backupCount=5,
-        encoding='utf-8'
+        encoding='utf-8',
+        mode='a'  # Append mode
     )
     handler.setFormatter(
         logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')

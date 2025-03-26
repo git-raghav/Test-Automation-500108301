@@ -207,18 +207,31 @@ async def test_response_time(test_user_token):
 @allure.story("Operation Logs")
 async def test_operation_logs(test_user_token):
     """Test that operations are properly logged"""
+    import time
+
+    # Ensure log file exists
+    os.makedirs("logs", exist_ok=True)
+
     headers = {"Authorization": f"Bearer {test_user_token}"}
     response = client.post("/add", json={"operation": "add", "num1": 2, "num2": 3}, headers=headers)
     assert response.status_code == 200
 
+    # Wait for log file to be written
+    time.sleep(0.1)  # Small delay to ensure log is written
+
     # Check log file
-    with open("logs/app.log", "r") as f:
-        log_lines = f.readlines()
-        assert any("Addition operation performed" in line for line in log_lines)
-        assert any("username=testuser" in line for line in log_lines)
-        assert any("num1=2" in line for line in log_lines)
-        assert any("num2=3" in line for line in log_lines)
-        assert any("result=5" in line for line in log_lines)
+    log_file = "logs/app.log"
+    if os.path.exists(log_file):
+        with open(log_file, "r") as f:
+            log_lines = f.readlines()
+            # Check for log entries
+            assert any("Addition operation performed" in line for line in log_lines), "Operation log not found"
+            assert any("username=testuser" in line for line in log_lines), "Username log not found"
+            assert any("num1=2" in line for line in log_lines), "num1 log not found"
+            assert any("num2=3" in line for line in log_lines), "num2 log not found"
+            assert any("result=5" in line for line in log_lines), "Result log not found"
+    else:
+        pytest.fail(f"Log file not found at {log_file}")
 
 # Add pytest configuration
 def pytest_configure(config):

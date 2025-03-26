@@ -1,0 +1,219 @@
+name: API Tests
+on: [push, pull_request]
+
+jobs:
+    test:
+        runs-on: ubuntu-latest
+        services:
+            postgres:
+                image: postgres:13
+                env:
+                    POSTGRES_USER: postgres
+                    POSTGRES_PASSWORD: postgres
+                    POSTGRES_DB: arithmetic_db
+                ports:
+                    - 5432:5432
+                options: >-
+                    --health-cmd pg_isready
+                    --health-interval 10s
+                    --health-timeout 5s
+                    --health-retries 5
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Set up Python
+              uses: actions/setup-python@v5
+              with:
+                  python-version: "3.10"
+
+            - name: Install system dependencies
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y python3-pip postgresql-client curl
+
+            - name: Install Python dependencies
+              run: |
+                  python -m pip install --upgrade pip
+                  pip install -r requirements.txt
+
+            - name: Create directories
+              run: |
+                  mkdir -p allure-results logs
+
+            - name: Set environment variables
+              run: |
+                  echo "DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/arithmetic_db" >> $GITHUB_ENV
+                  echo "ENV=test" >> $GITHUB_ENV
+                  echo "SECRET_KEY=test-secret-key" >> $GITHUB_ENV
+                  echo "ACCESS_TOKEN_EXPIRE_MINUTES=30" >> $GITHUB_ENV
+
+            - name: Wait for PostgreSQL
+              run: |
+                  echo "Waiting for PostgreSQL to be ready..."
+                  for i in {1..30}; do
+                    if pg_isready -h localhost -p 5432; then
+                      echo "PostgreSQL is ready!"
+                      break
+                    fi
+                    echo "Attempt $i: Waiting for PostgreSQL..."
+                    sleep 2
+                  done
+                  if ! pg_isready -h localhost -p 5432; then
+                    echo "PostgreSQL failed to start"
+                    exit 1
+                  fi
+
+            - name: Start FastAPI server
+              run: |
+                  # Create necessary directories
+                  mkdir -p logs allure-results
+
+                  # Start server with proper environment variables
+                  DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/arithmetic_db \
+                  ENV=test \
+                  SECRET_KEY=test-secret-key \
+                  ACCESS_TOKEN_EXPIRE_MINUTES=30 \
+                  nohup python apiserver.py > server.log 2>&1 &
+
+                  # Save server PID
+                  echo $! > server.pid
+
+                  # Wait for server to be ready
+                  echo "Waiting for server to start..."
+                  for i in {1..30}; do
+                    if curl -s http://localhost:8000/ > /dev/null; then
+                      echo "Server is up!"
+                      break
+                    fi
+                    echo "Attempt $i: Waiting for server..."
+                    sleep 2
+                    # Check if server process is still running
+                    if ! kill -0 $(cat server.pid) 2>/dev/null; then
+                      echo "Server process died. Logs:"
+                      cat server.log
+                      exit 1
+                    fi
+                  done
+
+                  # Check if server is running
+                  if ! curl -s http://localhost:8000/ > /dev/null; then
+                    echo "Server failed to start. Logs:"
+                    cat server.log
+                    exit 1
+                  fi
+              env:
+                  PYTHONUNBUFFERED: 1
+                  DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/arithmetic_db
+                  ENV: test
+                  SECRET_KEY: test-secret-key
+                  ACCESS_TOKEN_EXPIRE_MINUTES: 30
+
+            - name: Run unit tests with coverage
+              run: |
+                  # Ensure server is running before tests
+                  if ! curl -s http://localhost:8000/ > /dev/null; then
+                    echo "Server is not running before tests"
+                    exit 1
+                  fi
+
+                  # Create necessary directories
+                  mkdir -p logs allure-results
+
+                  # Run tests with coverage and generate reports
+                  pytest automation_test_pytest.py -v \
+                    --cov=apiserver \
+                    --html=report.html \
+                    --self-contained-html \
+                    --alluredir=./allure-results \
+                    --tb=short \
+                    --capture=no || true
+
+                  # Check if report was generated
+                  if [ ! -f report.html ]; then
+                    echo "Test report was not generated"
+                    exit 1
+                  fi
+
+                  # Display test results
+                  echo "Test Results:"
+                  cat report.html
+
+            - name: Check if tests passed
+              if: failure()
+              run: |
+                  echo "Tests failed. Check the test report for details."
+                  if [ -f report.html ]; then
+                    cat report.html
+                  else
+                    echo "No test report was generated"
+                  fi
+
+            - name: Run performance tests
+              if: success() || failure()
+              run: |
+                  # Wait for server to be ready
+                  echo "Waiting for server to be ready..."
+                  for i in {1..30}; do
+                    if curl -s http://localhost:8000/ > /dev/null; then
+                      echo "Server is up!"
+                      break
+                    fi
+                    echo "Attempt $i: Waiting for server..."
+                    sleep 2
+                  done
+
+                  # Run performance tests with increased timeout
+                  locust -f performance_test.py \
+                    --host=http://localhost:8000 \
+                    --users 10 \
+                    --spawn-rate 1 \
+                    --run-time 1m \
+                    --headless \
+                    --loglevel INFO
+
+            - name: Stop FastAPI server
+              if: always()
+              run: |
+                  if [ -f server.pid ]; then
+                    pid=$(cat server.pid)
+                    if kill -0 $pid 2>/dev/null; then
+                      kill $pid
+                      echo "Server stopped successfully"
+                    else
+                      echo "Server process not found"
+                    fi
+                  fi
+
+            - name: Upload test report
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: test-report
+                  path: report.html
+                  retention-days: 7
+
+            - name: Upload allure results
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: allure-results
+                  path: ./allure-results
+                  retention-days: 7
+
+            - name: Upload logs
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: app-logs
+                  path: ./logs
+                  retention-days: 7
+
+            - name: Upload server logs
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: server-logs
+                  path: server.log
+                  retention-days: 7

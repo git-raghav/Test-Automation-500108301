@@ -130,7 +130,7 @@ async def test_login(test_user_token):
 @allure.story("Unauthorized Access")
 async def test_unauthorized_access():
     """Test unauthorized access to protected endpoints"""
-    response = client.get("/add/2/3")
+    response = client.post("/add", json={"num1": 2, "num2": 3})
     assert response.status_code == 401
 
 @pytest.mark.asyncio
@@ -141,8 +141,8 @@ async def test_operation_history(test_user_token):
     headers = {"Authorization": f"Bearer {test_user_token}"}
 
     # Perform some operations
-    client.get("/add/2/3", headers=headers)
-    client.get("/subtract/5/3", headers=headers)
+    client.post("/add", json={"num1": 2, "num2": 3}, headers=headers)
+    client.post("/subtract", json={"num1": 5, "num2": 3}, headers=headers)
 
     # Get history
     response = client.get("/history", headers=headers)
@@ -158,7 +158,7 @@ async def test_operation_history(test_user_token):
 async def test_operation_logging(test_user_token):
     """Test that operations are logged to database"""
     headers = {"Authorization": f"Bearer {test_user_token}"}
-    response = client.get("/add/2/3", headers=headers)
+    response = client.post("/add", json={"num1": 2, "num2": 3}, headers=headers)
     assert response.status_code == 200
 
     # Verify operation was logged
@@ -180,12 +180,12 @@ async def test_invalid_inputs(test_user_token):
     headers = {"Authorization": f"Bearer {test_user_token}"}
 
     # Test with non-numeric input
-    response = client.get("/add/abc/2", headers=headers)
+    response = client.post("/add", json={"num1": "abc", "num2": 2}, headers=headers)
     assert response.status_code == 422
 
     # Test with missing parameters
-    response = client.get("/add/1", headers=headers)
-    assert response.status_code == 404
+    response = client.post("/add", json={"num1": 1}, headers=headers)
+    assert response.status_code == 422
 
 @pytest.mark.asyncio
 @allure.feature("Performance")
@@ -196,7 +196,7 @@ async def test_response_time(test_user_token):
     headers = {"Authorization": f"Bearer {test_user_token}"}
 
     start_time = time.time()
-    response = client.get("/add/2/3", headers=headers)
+    response = client.post("/add", json={"num1": 2, "num2": 3}, headers=headers)
     end_time = time.time()
 
     assert response.status_code == 200
@@ -208,7 +208,7 @@ async def test_response_time(test_user_token):
 async def test_operation_logs(test_user_token):
     """Test that operations are properly logged"""
     headers = {"Authorization": f"Bearer {test_user_token}"}
-    response = client.get("/add/2/3", headers=headers)
+    response = client.post("/add", json={"num1": 2, "num2": 3}, headers=headers)
     assert response.status_code == 200
 
     # Check log file

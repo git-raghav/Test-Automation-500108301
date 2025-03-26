@@ -16,6 +16,7 @@ from auth import (
 )
 from logger import logger
 import uvicorn
+from fastapi.responses import JSONResponse
 
 # Initialize the FastAPI app
 app = FastAPI(
@@ -245,10 +246,13 @@ async def http_exception_handler(request, exc):
         status_code=exc.status_code,
         detail=exc.detail
     )
-    return {
-        "error": exc.detail,
-        "status_code": exc.status_code
-    }
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "error": exc.detail,
+            "status_code": exc.status_code
+        }
+    )
 
 # Run the app using Uvicorn
 if __name__ == "__main__":

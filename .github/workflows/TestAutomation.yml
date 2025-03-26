@@ -128,20 +128,41 @@ jobs:
             - name: Run performance tests
               if: success() || failure()
               run: |
+                  # Wait for server to be ready
+                  echo "Waiting for server to be ready..."
+                  for i in {1..30}; do
+                    if curl -s http://localhost:8000/ > /dev/null; then
+                      echo "Server is up!"
+                      break
+                    fi
+                    echo "Attempt $i: Waiting for server..."
+                    sleep 2
+                  done
+
                   # Register a test user first
                   echo "Registering test user..."
-                  curl -X POST http://localhost:8000/register \
+                  REGISTER_RESPONSE=$(curl -s -X POST http://localhost:8000/register \
                     -H "Content-Type: application/json" \
-                    -d '{"username":"testuser","email":"test@example.com","password":"testpassword"}' \
-                    -v
+                    -d '{"username":"testuser","email":"test@example.com","password":"testpassword"}')
 
-                  # Run performance tests
+                  echo "Register response: $REGISTER_RESPONSE"
+
+                  if [[ $REGISTER_RESPONSE == *"error"* ]]; then
+                    echo "Registration failed, trying to login..."
+                    LOGIN_RESPONSE=$(curl -s -X POST http://localhost:8000/token \
+                      -H "Content-Type: application/x-www-form-urlencoded" \
+                      -d "username=testuser&password=testpassword")
+                    echo "Login response: $LOGIN_RESPONSE"
+                  fi
+
+                  # Run performance tests with increased timeout
                   locust -f performance_test.py \
                     --host=http://localhost:8000 \
                     --users 10 \
                     --spawn-rate 1 \
                     --run-time 1m \
-                    --headless
+                    --headless \
+                    --loglevel INFO
 
             - name: Stop FastAPI server
               if: always()

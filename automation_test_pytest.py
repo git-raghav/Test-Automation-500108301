@@ -16,6 +16,10 @@ import json
 # Add the current directory to Python path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
+# Create necessary directories
+os.makedirs("logs", exist_ok=True)
+os.makedirs("allure-results", exist_ok=True)
+
 # Test database URL
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
@@ -193,5 +197,7 @@ if __name__ == "__main__":
         "--cov=apiserver",
         "--html=report.html",
         "--self-contained-html",
-        "--alluredir=./allure-results"
+        "--alluredir=./allure-results",
+        "--tb=short",
+        "--capture=no"
     ])

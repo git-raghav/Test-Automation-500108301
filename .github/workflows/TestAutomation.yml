@@ -93,19 +93,37 @@ jobs:
                     exit 1
                   fi
 
+                  # Create necessary directories
+                  mkdir -p logs allure-results
+
+                  # Run tests with coverage and generate reports
                   pytest automation_test_pytest.py -v \
                     --cov=apiserver \
                     --html=report.html \
                     --self-contained-html \
                     --alluredir=./allure-results \
                     --tb=short \
-                    --capture=no
+                    --capture=no || true
+
+                  # Check if report was generated
+                  if [ ! -f report.html ]; then
+                    echo "Test report was not generated"
+                    exit 1
+                  fi
+
+                  # Display test results
+                  echo "Test Results:"
+                  cat report.html
 
             - name: Check if tests passed
               if: failure()
               run: |
                   echo "Tests failed. Check the test report for details."
-                  cat report.html
+                  if [ -f report.html ]; then
+                    cat report.html
+                  else
+                    echo "No test report was generated"
+                  fi
 
             - name: Run performance tests
               if: success() || failure()

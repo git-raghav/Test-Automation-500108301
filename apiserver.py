@@ -44,7 +44,7 @@ class OperationResult(BaseModel):
 @app.on_event("startup")
 async def startup_event():
     await init_db()
-    logger.info("Application startup", event="startup")
+    logger.info("Application startup")
 
 # User registration
 @app.post("/register", response_model=Token)
